@@ -1,7 +1,7 @@
 from utils import char_seq_to_syll_seq, diac_seq_to_syll_seq
 import seq_generators
 
-def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn):
+def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn, print_progress=False):
   total_chars = 0
   correct_chars = 0
   total_words = 0
@@ -10,6 +10,9 @@ def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn):
   correct_sentences = 0
 
   for tokens, labels in generator_fn(test_src_fpath, test_target_fpath):
+    if print_progress:
+      print(total_sentences, end='\r')
+      
     preds = model.predict(tokens)
 
     # convert all predictions to word predictions

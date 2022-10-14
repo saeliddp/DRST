@@ -50,7 +50,7 @@ if __name__ == '__main__':
   mf_diac.train('data/vi/src_train.txt', 'data/vi/target_train.txt', char_diac_seq_generator)
   acc = evaluate_accuracy(mf_diac, 'data/vi/src_test.txt', 'data/vi/target_test.txt', char_diac_seq_generator)
   log_lines.append(['char_diac', acc['char_acc'], acc['word_acc'], acc['sentence_acc']])
-
+  
   with open('test_results/most_frequent_accuracy.csv', 'w', newline='') as fw:
     writer = csv.writer(fw, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(['sequence_label_types', 'character_accuracy', 'word_accuracy', 'sentence_accuracy'])

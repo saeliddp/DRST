@@ -1,27 +1,40 @@
+from collections import Counter
 from constants import *
 from viet_diacritic_mark import rediacritize_viet_char
 
-def assign_ix_to_data(tr_src_fpath, tr_target_fpath, generator_fn):
+# if last_k_to_unknown > 0, coalesces least-k frequent tokens to UNKNOWN token
+def assign_ix_to_data(tr_src_fpath, tr_target_fpath, generator_fn, last_k_to_unknown=0):
   tok_to_ix = {}
   ix_to_tok = {}
   label_to_ix = {}
   ix_to_label = {}
 
-  curr_token_ix = 0
   curr_label_ix = 0
+  token_counts = Counter()
 
   for tokens, labels in generator_fn(tr_src_fpath, tr_target_fpath):
     for token in tokens:
-      if token not in tok_to_ix:
-        tok_to_ix[token] = curr_token_ix
-        ix_to_tok[curr_token_ix] = token
-        curr_token_ix += 1
+      token_counts[token] += 1
     
     for label in labels:
       if label not in label_to_ix:
         label_to_ix[label] = curr_label_ix
         ix_to_label[curr_label_ix] = label
         curr_label_ix += 1
+
+  if last_k_to_unknown > 0:
+    unk_count = 0
+    for token, count in token_counts.most_common()[-last_k_to_unknown: ]:
+      unk_count += count
+      del token_counts[token]
+    token_counts[UNKNOWN] = unk_count
+  
+  curr_token_ix = 0
+  for token in token_counts:
+    if token not in tok_to_ix:
+        tok_to_ix[token] = curr_token_ix
+        ix_to_tok[curr_token_ix] = token
+        curr_token_ix += 1
 
   return tok_to_ix, ix_to_tok, label_to_ix, ix_to_label
 
