@@ -12,13 +12,22 @@ class MostFrequent():
   def train(self, tr_src_fpath, tr_target_fpath, generator_fn):
     self.tok_to_ix, self.ix_to_tok, self.label_to_ix, self.ix_to_label = assign_ix_to_data(tr_src_fpath, tr_target_fpath, generator_fn)
     
-    counts = np.zeros((len(self.tok_to_ix), len(self.label_to_ix)))
+    counts = {tok: {} for tok in self.tok_to_ix}
 
     for tokens, labels in generator_fn(tr_src_fpath, tr_target_fpath):
       for t, l in zip(tokens, labels):
-        counts[self.tok_to_ix[t]][self.label_to_ix[l]] += 1
+        if l not in counts[t]:
+          counts[t][l] = 0
+        counts[t][l] += 1
     
-    self.most_freq_labels = np.argmax(counts, axis=1)
+    self.most_freq_labels = np.ndarray(len(self.tok_to_ix))
+
+    for tok in counts:
+      max_count = (0, None)
+      for label in counts[tok]:
+        if counts[tok][label] > max_count[0]:
+          max_count = (counts[tok][label], label)
+      self.most_freq_labels[self.tok_to_ix[tok]] = self.label_to_ix[max_count[1]]
   
   def predict(self, tokens):
     preds = []

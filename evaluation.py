@@ -1,4 +1,5 @@
 from utils import char_seq_to_syll_seq, diac_seq_to_syll_seq
+from constants import NUMERIC
 import seq_generators
 
 def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn, print_progress=False):
@@ -28,6 +29,9 @@ def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn, pr
     
     sentence_corr = True
     for t_w, p_w in zip(true_words[1:], pred_words[1:]): # skip START_SENT
+      if t_w == NUMERIC:
+        continue
+
       word_corr = True
       # technically possible that lengths are different for word-based models
       for i in range(min(len(t_w), len(p_w))):
