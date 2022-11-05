@@ -135,7 +135,7 @@ class HMM():
 
 if __name__ == '__main__':
   from seq_generators import *
-  from evaluation import evaluate_accuracy
+  from evaluation import *
   from viet_diacritic_mark import VietDiacriticMark
   import csv
 
@@ -144,11 +144,12 @@ if __name__ == '__main__':
   hmm_word = HMM(SENT_START)
   hmm_word.train('data/vi/src_train.txt', 'data/vi/target_train.txt', syll_syll_seq_generator)
   print('train done')
-  acc = evaluate_accuracy(
-    hmm_word, 'data/vi/src_test.txt', 'data/vi/target_test.txt', syll_syll_seq_generator, print_progress=True)
-  log_lines.append(['syll_syll', acc['char_acc'], acc['word_acc'], acc['sentence_acc']])
-  print(acc)
-
+  evaluate_sent_accuracy_by_rf(hmm_word, 'data/vi/src_test.txt', 'data/vi/target_test.txt', 
+    syll_syll_seq_generator, save_to_csv='err_analysis/acc_by_rf.csv')
+  #acc = evaluate_accuracy(
+  #  hmm_word, 'data/vi/src_test.txt', 'data/vi/target_test.txt', syll_syll_seq_generator, print_progress=True)
+  #log_lines.append(['syll_syll', acc['char_acc'], acc['word_acc'], acc['sentence_acc']])
+  """
   hmm_char = HMM(WORD_START)
   hmm_char.train('data/vi/src_train.txt', 'data/vi/target_train.txt', char_char_seq_generator)
   print('train done')
@@ -170,4 +171,5 @@ if __name__ == '__main__':
     writer.writerow(['sequence_label_types', 'character_accuracy', 'word_accuracy', 'sentence_accuracy'])
     for line in log_lines:
       writer.writerow(line)
-
+  """
+  
