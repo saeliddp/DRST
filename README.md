@@ -6,7 +6,7 @@ Train Size: 819,918 sentences
 Dev Size:   14,884 sentences  
 Test Size:  30,000 sentences  
 
-The data comes lightly preprocessed (1 sentence per line, all lowercased)
+The data comes lightly preprocessed (1 sentence per line, all lowercased) 
 ### Tokenization
 To get syllables/words from raw sentences, split on r'[\s\W]'
 
