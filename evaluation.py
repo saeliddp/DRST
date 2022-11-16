@@ -1,9 +1,12 @@
 import csv
 import pandas as pd
 import math
+import torch
 import numpy as np
 from utils import char_seq_to_syll_seq, diac_seq_to_syll_seq
-from constants import NUMERIC
+from constants import *
+from viet_diacritic_mark import src_char_to_ix
+
 import seq_generators
 
 def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn, print_progress=False):
@@ -67,6 +70,49 @@ def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn, pr
     'word_acc': correct_words / total_words,
     'sentence_acc': correct_sentences / total_sentences
   }
+
+def evaluate_accuracy_torch(model, dataloader, device,
+    ignore_token_ids={src_char_to_ix[WORD_START], src_char_to_ix[NUMERIC], src_char_to_ix[PAD], src_char_to_ix[UNKNOWN]}):
+  total_chars = 0
+  correct_chars = 0
+  total_words = 0
+  correct_words = 0
+  total_sentences = 0
+  correct_sentences = 0
+
+  for batch in dataloader:
+    input_ids = batch['input_ids'].to(device)
+    scores = model(input_ids)[0]
+    preds = torch.argmax(scores, axis=2)
+    for token_ids, pred_ids, true_ids in zip(batch['input_ids'], preds, batch['labels']):
+      sent_corr = True
+      total_sentences += 1
+      word_corr = True
+      for i in range(len(token_ids) - 1, -1, -1):
+        if token_ids[i] == src_char_to_ix[WORD_START]:
+          total_words += 1
+          if word_corr:
+            correct_words += 1
+
+          word_corr = True
+
+        if int(token_ids[i]) not in ignore_token_ids:
+          total_chars += 1
+          if pred_ids[i] == true_ids[i]:
+            correct_chars += 1
+          else:
+            word_corr = False
+            sent_corr = False
+      
+      if sent_corr:
+        correct_sentences += 1
+
+  return {
+    'char_acc': correct_chars / total_chars, 
+    'word_acc': correct_words / total_words,
+    'sentence_acc': correct_sentences / total_sentences
+  }
+
 
 def evaluate_accuracy_per_src_syllable(model, test_src_fpath, test_target_fpath, generator_fn, 
                                    print_progress=False, save_to_csv=None):

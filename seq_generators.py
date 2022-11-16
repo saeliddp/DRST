@@ -1,6 +1,6 @@
 import re
 from constants import *
-from viet_diacritic_mark import VietDiacriticMark, get_mark_viet
+from viet_diacritic_mark import VietDiacriticMark, get_mark_viet, src_char_to_ix
 
 syll_split_pattern = r'[\s\W]+'
 # training sequences of characters with labels being diacritics
@@ -25,7 +25,7 @@ def char_diac_seq_generator(src_fpath, target_fpath):
         else:
           i = 0
           for src_char in src_syll:
-            chars.append(src_char)
+            chars.append(src_char if src_char in src_char_to_ix else UNKNOWN)
             tags.append(get_mark_viet(target_syll[i]))
             i += 1
 
