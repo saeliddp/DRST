@@ -50,7 +50,6 @@ def train(epochs, lr, warmup_steps):
   )
 
   trainer.train()
-  trainer.save_model('torch_models/basic_model')
   model.eval()
   return model, trainer
 
