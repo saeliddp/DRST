@@ -63,6 +63,13 @@ def hyperparameter_search():
       if acc['word_acc'] > max_word_acc:
         max_word_acc = acc['word_acc']
         trainer.save_model('torch_models/best_model')
+        with open('best.txt', 'w') as fw:
+          fw.write('Learning Rate: ' + str(lr) + '\n')
+          fw.write('Warmup Steps: ' + str(warmup_steps) + '\n')
+          fw.write(str(acc))
 
 if __name__ == '__main__':
-  hyperparameter_search()
+  model = DistilBertForTokenClassification.from_pretrained('torch_models/n41k')
+  test_dataset = ViCharDiacDataset('data/vi/src_test.txt', 'data/vi/target_test.txt')
+  test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+  print(evaluate_accuracy_torch(model, test_loader, device))

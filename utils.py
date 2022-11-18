@@ -128,21 +128,23 @@ def diac_seq_to_syll_seq(tokens, diacritics):
   syll_seq.reverse()
   return syll_seq
 
+def torch_ind_to_syll_seq(token_ids, label_ids):
+  tokens = [ix_to_src_char[int(t)] for t in token_ids]
+  end_ix = tokens.index(PAD) if PAD in tokens else len(tokens)
+  tokens = tokens[:end_ix]
+  labels = [ix_to_label[int(l)] for l in label_ids[:end_ix]]
+  return diac_seq_to_syll_seq(tokens, labels)
+
 def reconstruct_torch_preds(dataset, model, limit=5):
-  ix_to_src_char = {v: k for k, v in src_char_to_ix.items()}
-  ix_to_label = {v: k for k, v in label_to_ix.items()}
   all_targets = []
   all_preds = []
   for i in range(limit):
     if i >= len(dataset.encodings):
       break
     ids = dataset.encodings[i].ids
-    tokens = [ix_to_src_char[t] for t in ids]
-    end_ix = tokens.index(PAD) if PAD in tokens else len(tokens)
-    tokens = tokens[:end_ix]
-    labels = [ix_to_label[l] for l in dataset.labels[i][:end_ix]]
+    all_targets.append(torch_ind_to_syll_seq(ids, dataset.labels[i]))
     logits = model(torch.tensor([ids])).logits
-    preds = [ix_to_label[l.item()] for l in torch.argmax(logits, axis=2).flatten()[:end_ix]]
-    all_targets.append(diac_seq_to_syll_seq(tokens, labels))
-    all_preds.append(diac_seq_to_syll_seq(tokens, preds))
+    preds = [ix_to_label[l.item()] for l in torch.argmax(logits, axis=2).flatten()]
+    all_preds.append(torch_ind_to_syll_seq(ids, preds))
+
   return all_targets, all_preds

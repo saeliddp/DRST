@@ -82,3 +82,6 @@ src_char_to_ix[UNKNOWN] = 2
 src_char_to_ix[PAD] = 3
 
 label_to_ix = {data: data.value for data in VietDiacriticMark}
+
+ix_to_src_char = {v: k for k, v in src_char_to_ix.items()}
+ix_to_label = {v: k for k, v in label_to_ix.items()}

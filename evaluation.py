@@ -3,7 +3,7 @@ import pandas as pd
 import math
 import torch
 import numpy as np
-from utils import char_seq_to_syll_seq, diac_seq_to_syll_seq
+from utils import char_seq_to_syll_seq, diac_seq_to_syll_seq, torch_ind_to_syll_seq
 from constants import *
 from viet_diacritic_mark import src_char_to_ix
 
@@ -71,7 +71,7 @@ def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn, pr
     'sentence_acc': correct_sentences / total_sentences
   }
 
-def evaluate_accuracy_torch(model, dataloader, device,
+def evaluate_accuracy_torch(model, dataloader, device, error_output=None,
     ignore_token_ids={src_char_to_ix[WORD_START], src_char_to_ix[NUMERIC], src_char_to_ix[PAD], src_char_to_ix[UNKNOWN]}):
   total_chars = 0
   correct_chars = 0
@@ -79,6 +79,9 @@ def evaluate_accuracy_torch(model, dataloader, device,
   correct_words = 0
   total_sentences = 0
   correct_sentences = 0
+
+  if error_output:
+    err_file = open(error_output, 'w')
 
   for batch in dataloader:
     input_ids = batch['input_ids'].to(device)
@@ -106,6 +109,12 @@ def evaluate_accuracy_torch(model, dataloader, device,
       
       if sent_corr:
         correct_sentences += 1
+      elif error_output:
+        err_file.write('T: ' + ' '.join(torch_ind_to_syll_seq(token_ids, true_ids)[1:]) + '\n')
+        err_file.write('P: ' + ' '.join(torch_ind_to_syll_seq(token_ids, pred_ids)[1:]) + '\n\n')
+
+  if error_output:
+    err_file.close()
 
   return {
     'char_acc': correct_chars / total_chars, 

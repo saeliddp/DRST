@@ -41,11 +41,13 @@ class ViCharDiacDataset(torch.utils.data.Dataset):
   def __init__(self, src_fpath, target_fpath):
     all_tokens = []
     all_labels = []
-
+    count = 0
     for tokens, labels in char_diac_seq_generator(src_fpath, target_fpath):
+      if len(tokens) > tokenizer.model_max_length:
+        count += 1
       all_tokens.append(tokens)
       all_labels.append(labels)
-
+    #print(str(count) + '/' + str(len(all_tokens)))
     self.encodings = tokenizer(all_tokens, is_split_into_words=True, return_offsets_mapping=False, padding=True, truncation=True)
     self.labels = encode_tags(all_labels, self.encodings)
 
