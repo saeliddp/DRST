@@ -17,7 +17,7 @@ val_dataset = ViCharDiacDataset('data/vi/src_dev.txt', 'data/vi/target_dev.txt')
 val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 print('loaded val')
 
-def train(epochs, lr, warmup_steps):
+def train(epochs, lr, warmup_steps, accum_steps):
   model = DistilBertForTokenClassification.from_pretrained('distilbert-base-multilingual-cased', num_labels=len(label_to_ix))
   dbtokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-multilingual-cased')
   new_embeds = Embedding(len(src_char_to_ix), model.get_input_embeddings().embedding_dim)
@@ -40,6 +40,7 @@ def train(epochs, lr, warmup_steps):
     weight_decay=0.01,               # strength of weight decay
     logging_dir='./logs',            # directory for storing logs
     logging_steps=10,
+    gradient_accumulation_steps=accum_steps,
   )
 
   trainer = Trainer(
@@ -53,23 +54,20 @@ def train(epochs, lr, warmup_steps):
   model.eval()
   return model, trainer
 
-def hyperparameter_search():
+def hyperparameter_search(accum_steps):
   max_word_acc = 0
   for lr in [1e-6, 1e-5, 1e-4]:
     for warmup_steps in [1000, 5000]:
-      model, trainer = train(1, lr, warmup_steps)
+      model, trainer = train(1, lr, warmup_steps, accum_steps)
       acc = evaluate_accuracy_torch(model, val_loader, device)
       print(lr, warmup_steps, acc)
       if acc['word_acc'] > max_word_acc:
         max_word_acc = acc['word_acc']
         trainer.save_model('torch_models/best_model')
-        with open('best.txt', 'w') as fw:
+        with open('best_' + str(accum_steps) + 'accum.txt', 'w') as fw:
           fw.write('Learning Rate: ' + str(lr) + '\n')
           fw.write('Warmup Steps: ' + str(warmup_steps) + '\n')
           fw.write(str(acc))
 
 if __name__ == '__main__':
-  model = DistilBertForTokenClassification.from_pretrained('torch_models/n41k')
-  test_dataset = ViCharDiacDataset('data/vi/src_test.txt', 'data/vi/target_test.txt')
-  test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
-  print(evaluate_accuracy_torch(model, test_loader, device))
+  hyperparameter_search(2)
