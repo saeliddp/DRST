@@ -59,10 +59,6 @@ def evaluate_accuracy(model, test_src_fpath, test_target_fpath, generator_fn, pr
     
     if sentence_corr:
       correct_sentences += 1
-    else:
-      print(true_words)
-      print(pred_words)
-      print()
     total_sentences += 1
 
   return {
@@ -218,6 +214,68 @@ def evaluate_prf_per_target_syllable(model, test_src_fpath, test_target_fpath, g
       if t_w == p_w:
         token_counts[t_w]['correct'] += 1
     total_sentences += 1
+
+  recalls = {}
+  precisions = {}
+  f_ones = {}
+  for k in token_counts:
+    if token_counts[k]['times_correct'] > 0:
+      recalls[k] = token_counts[k]['correct'] / token_counts[k]['times_correct']
+    else:
+      recalls[k] = -1
+
+    if token_counts[k]['times_predicted'] > 0:
+      precisions[k] = token_counts[k]['correct'] / token_counts[k]['times_predicted']
+    else:
+      precisions[k] = -1
+      
+    if recalls[k] > 0 and precisions[k] > 0:
+      f_ones[k] = 2 * (precisions[k] * recalls[k]) / (precisions[k] + recalls[k])
+    else:
+      f_ones[k] = -1
+  
+  if save_to_csv:
+    with open(save_to_csv, 'w', newline='') as fw:
+      writer = csv.writer(fw, quoting=csv.QUOTE_MINIMAL)
+      writer.writerow(['target_token', 'recall', 'precision', 'f1'])
+      for k in recalls:
+        writer.writerow([k, recalls[k], precisions[k], f_ones[k]])
+
+  return recalls, precisions, f_ones
+
+def evaluate_prf_per_target_syllable_torch(model, dataloader, device, save_to_csv=None):
+  token_counts = {}
+
+  total_sentences = 0
+  for batch in dataloader:
+    input_ids = batch['input_ids'].to(device)
+    scores = model(input_ids)[0]
+    preds = torch.argmax(scores, axis=2)
+    labels = batch['labels']
+    for ids, pred_labels, true_labels in zip(input_ids, preds, labels):
+      true_words = torch_ind_to_syll_seq(ids, true_labels)
+      pred_words = torch_ind_to_syll_seq(ids, pred_labels)
+    
+      for t_w, p_w in zip(true_words[1:], pred_words[1:]): # skip START_SENT
+        if t_w == NUMERIC:
+          continue
+        if t_w not in token_counts:
+          token_counts[t_w] = {}
+          token_counts[t_w]['times_predicted'] = 0
+          token_counts[t_w]['times_correct'] = 0
+          token_counts[t_w]['correct'] = 0
+        token_counts[t_w]['times_correct'] += 1
+
+        if p_w not in token_counts:
+          token_counts[p_w] = {}
+          token_counts[p_w]['times_predicted'] = 0
+          token_counts[p_w]['times_correct'] = 0
+          token_counts[p_w]['correct'] = 0
+        token_counts[p_w]['times_predicted'] += 1
+
+        if t_w == p_w:
+          token_counts[t_w]['correct'] += 1
+      total_sentences += 1
 
   recalls = {}
   precisions = {}

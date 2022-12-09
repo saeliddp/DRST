@@ -1,14 +1,15 @@
 import numpy as np
 from utils import assign_ix_to_data
-from constants import UNKNOWN, OTHER
+from constants import *
 
 class HMM():
   # start_label is the label which will be at the front of every ground truth label sequence
   # e.g. START_SENT
   def __init__(self, start_label):
     self.start_label = start_label
-    self.emission_probs = None # p(label | token)
+    self.emission_probs = None # p(token | label)
     self.transition_probs = None # p(label | prev_label)
+    self.poss_labels = None
     self.tok_to_ix = {}
     self.ix_to_tok = {}
     self.label_to_ix = {}
@@ -33,8 +34,10 @@ class HMM():
     self.tok_to_ix, self.ix_to_tok, self.label_to_ix, self.ix_to_label = assign_ix_to_data(
       tr_src_fpath, tr_target_fpath, generator_fn)
 
-    emission_counts = {token: {} for token in self.tok_to_ix}
+    emission_counts = {label: {} for label in self.label_to_ix}
     transition_counts = {label: {} for label in self.label_to_ix}
+    
+    self.poss_labels = {token: set() for token in self.tok_to_ix}
     transition_counts[UNKNOWN] = {}
 
     for tokens, labels in generator_fn(tr_src_fpath, tr_target_fpath):
@@ -47,10 +50,11 @@ class HMM():
 
           transition_counts[prev_label][l] += 1
 
-        if l not in emission_counts[t]:
-          emission_counts[t][l] = 0
+        self.poss_labels[t].add(l)
+        if t not in emission_counts[l]:
+          emission_counts[l][t] = 0
         
-        emission_counts[t][l] += 1
+        emission_counts[l][t] += 1
         prev_label = l
 
     for token in emission_counts:
@@ -75,7 +79,7 @@ class HMM():
       bptrs.append(max_ind)
       return scores, labels, bptrs
 
-    for label in self.emission_probs[curr_token]:
+    for label in self.poss_labels[curr_token]:
       # safe to ignore since emission prob will be 0 and we know there will be another label
       # besides OTHER
       if label == OTHER:
@@ -92,7 +96,7 @@ class HMM():
         else:
           val = prev_val + self.transition_probs[UNKNOWN][OTHER]
 
-        val += self.emission_probs[curr_token][label]
+        val += self.emission_probs[label][curr_token]
         
         if val > max_ind_val[1]:
           max_ind_val = (i, val)
@@ -141,15 +145,14 @@ if __name__ == '__main__':
 
   log_lines = []
   
-  hmm_word = HMM(SENT_START)
-  hmm_word.train('data/vi/src_train.txt', 'data/vi/target_train.txt', syll_syll_seq_generator)
+  hmm_char = HMM(SENT_START)
+  hmm_char.train('data/vi/src_train.txt', 'data/vi/target_train.txt', syll_syll_seq_generator)
   print('train done')
-  evaluate_sent_accuracy_by_rf(hmm_word, 'data/vi/src_test.txt', 'data/vi/target_test.txt', 
-    syll_syll_seq_generator, save_to_csv='err_analysis/acc_by_rf.csv')
-  #acc = evaluate_accuracy(
-  #  hmm_word, 'data/vi/src_test.txt', 'data/vi/target_test.txt', syll_syll_seq_generator, print_progress=True)
-  #log_lines.append(['syll_syll', acc['char_acc'], acc['word_acc'], acc['sentence_acc']])
-  """
+  acc = evaluate_accuracy(
+    hmm_char, 'data/vi/src_test.txt', 'data/vi/target_test.txt', syll_syll_seq_generator, print_progress=True)
+  log_lines.append(['syll_syll', acc['char_acc'], acc['word_acc'], acc['sentence_acc']])
+  print(acc)
+
   hmm_char = HMM(WORD_START)
   hmm_char.train('data/vi/src_train.txt', 'data/vi/target_train.txt', char_char_seq_generator)
   print('train done')
@@ -171,5 +174,4 @@ if __name__ == '__main__':
     writer.writerow(['sequence_label_types', 'character_accuracy', 'word_accuracy', 'sentence_accuracy'])
     for line in log_lines:
       writer.writerow(line)
-  """
   

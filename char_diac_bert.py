@@ -15,11 +15,12 @@ train_dataset = ViCharDiacDataset('data/vi/src_train.txt', 'data/vi/target_train
 print('loaded train')
 val_dataset = ViCharDiacDataset('data/vi/src_dev.txt', 'data/vi/target_dev.txt')
 val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
-print('loaded val')
+print('loaded validation')
 
 def train(epochs, lr, warmup_steps, accum_steps):
   model = DistilBertForTokenClassification.from_pretrained('distilbert-base-multilingual-cased', num_labels=len(label_to_ix))
   dbtokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-multilingual-cased')
+  # change embedding table to only have characters from written Vietnamese
   new_embeds = Embedding(len(src_char_to_ix), model.get_input_embeddings().embedding_dim)
   with torch.no_grad():
     for char in src_char_to_ix:
@@ -64,10 +65,10 @@ def hyperparameter_search(accum_steps):
       if acc['word_acc'] > max_word_acc:
         max_word_acc = acc['word_acc']
         trainer.save_model('torch_models/best_model')
-        with open('best_' + str(accum_steps) + 'accum.txt', 'w') as fw:
+        with open('best_05accum.txt', 'w') as fw:
           fw.write('Learning Rate: ' + str(lr) + '\n')
           fw.write('Warmup Steps: ' + str(warmup_steps) + '\n')
           fw.write(str(acc))
 
 if __name__ == '__main__':
-  hyperparameter_search(2)
+  hyperparameter_search(1)

@@ -38,15 +38,33 @@ def encode_tags(tags, encodings):
   return encoded_labels
 
 class ViCharDiacDataset(torch.utils.data.Dataset):
-  def __init__(self, src_fpath, target_fpath):
+  def __init__(self, src_fpath, target_fpath, word_window=None):
     all_tokens = []
     all_labels = []
     count = 0
     for tokens, labels in char_diac_seq_generator(src_fpath, target_fpath):
-      if len(tokens) > tokenizer.model_max_length:
-        count += 1
-      all_tokens.append(tokens)
-      all_labels.append(labels)
+      if word_window:
+        word_ends = []
+        for i, t in enumerate(tokens[1:]):
+          if t == WORD_START:
+            word_ends.append(i + 1)
+        word_ends.append(len(tokens))
+
+        start_i = 0
+        for word_i in range(word_window, len(word_ends), word_window):
+          end_i = word_ends[word_i]
+          all_tokens.append(tokens[start_i:end_i])
+          all_labels.append(labels[start_i:end_i])
+          start_i = end_i
+        if start_i < len(tokens):
+          all_tokens.append(tokens[start_i:])
+          all_labels.append(labels[start_i:])
+
+      else:
+        if len(tokens) > tokenizer.model_max_length:
+          count += 1
+        all_tokens.append(tokens)
+        all_labels.append(labels)
     #print(str(count) + '/' + str(len(all_tokens)))
     self.encodings = tokenizer(all_tokens, is_split_into_words=True, return_offsets_mapping=False, padding=True, truncation=True)
     self.labels = encode_tags(all_labels, self.encodings)
